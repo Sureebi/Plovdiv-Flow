@@ -2,6 +2,9 @@
 defineProps({
   hasWaypoint: { type: Boolean, default: false },
   selectingWaypoint: { type: Boolean, default: false },
+  showTraffic: { type: Boolean, default: true },
+  showIncidents: { type: Boolean, default: true },
+  showRoadworks: { type: Boolean, default: true },
   selectedDestination: {
     type: Object,
     default: null
@@ -20,7 +23,7 @@ defineProps({
   }
 })
 
-defineEmits(['toggle-waypoint', 'clear-waypoint'])
+defineEmits(['toggle-waypoint', 'clear-waypoint', 'toggle-traffic', 'toggle-incidents', 'toggle-roadworks'])
 
 function formatDistance(distanceInMeters) {
   if (!distanceInMeters) return 'Pending'
@@ -37,6 +40,31 @@ function formatTrafficDelay(delayInSeconds) {
   if (!delayInSeconds) return 'No delay'
 
   return `+${Math.round(delayInSeconds / 60)} min`
+}
+
+function formatDuration(durationInSeconds) {
+  if (durationInSeconds == null) return 'Unavailable'
+  return `${Math.max(1, Math.round(durationInSeconds / 60))} min`
+}
+
+function formatEstimatedTime(route, travelMode) {
+  if (!route) return 'Pending'
+  if (travelMode.id !== 'car' || route.traffic?.status !== 'live') {
+    return `${route.durationInMinutes} min`
+  }
+
+  const currentSeconds = route.durationInMinutes * 60
+  const times = [
+    route.traffic.noTrafficTravelTimeInSeconds,
+    route.traffic.historicTrafficTravelTimeInSeconds,
+    route.traffic.liveTrafficTravelTimeInSeconds,
+    currentSeconds
+  ].filter((value) => Number.isFinite(value))
+
+  if (!times.length) return `${route.durationInMinutes} min`
+  const minimum = Math.max(1, Math.floor(Math.min(...times) / 60))
+  const maximum = Math.max(minimum, Math.ceil(Math.max(...times) / 60))
+  return minimum === maximum ? `${maximum} min` : `${minimum}–${maximum} min`
 }
 </script>
 
@@ -64,22 +92,25 @@ function formatTrafficDelay(delayInSeconds) {
       <p v-if="activeRoute" class="route-hint" role="status">
         {{ activeRoute.traffic?.status === 'live' ? 'Traffic included at ' + new Date(activeRoute.traffic.updatedAt).toLocaleTimeString() : activeRoute.traffic?.reason === 'daily-limit' ? 'Daily traffic limit reached. Time excludes live traffic.' : 'Time excludes live traffic.' }}
       </p>
+      <p v-if="activeRoute?.traffic?.status === 'live'" class="route-hint traffic-explanation">
+        Current estimate: {{ activeRoute.durationInMinutes }} min. The range compares clear roads, usual traffic and live traffic.
+      </p>
       <div v-if="activeRoute" class="route-meta">
         <div>
-          <small>ESTIMATED TIME</small>
-          <b>{{ activeRoute.durationInMinutes }} min</b>
+          <small>{{ travelMode.id === 'car' ? 'ESTIMATED RANGE' : 'ESTIMATED TIME' }}</small>
+          <b>{{ formatEstimatedTime(activeRoute, travelMode) }}</b>
         </div>
         <div>
           <small>DISTANCE</small>
           <b>{{ formatDistance(activeRoute.distanceInMeters) }}</b>
         </div>
         <div>
-          <small>TRAFFIC</small>
+          <small>DELAY VS CLEAR ROADS</small>
           <b>{{ formatTrafficDelay(activeRoute.trafficDelayInSeconds) }}</b>
         </div>
         <div>
-          <small>SOURCE</small>
-          <b>{{ activeRoute.source }}</b>
+          <small>USUAL AT THIS TIME</small>
+          <b>{{ formatDuration(activeRoute.traffic?.historicTrafficTravelTimeInSeconds) }}</b>
         </div>
         <div>
           <small>VIA POINT</small>
@@ -95,34 +126,42 @@ function formatTrafficDelay(delayInSeconds) {
     <div class="title">SELECT WHAT TO SEE</div>
 
     <label>
-      <input type="checkbox" disabled>
-      Traffic map overlay (unavailable)
+      <input
+        type="checkbox"
+        :checked="showTraffic"
+        @change="$emit('toggle-traffic', $event.target.checked)"
+      >
+      Traffic delays
     </label>
 
-    <label>
-      <input type="checkbox" disabled>
-      Congested roads
-    </label>
+    <div v-if="showTraffic" class="traffic-legend" aria-label="Traffic colors">
+      <span><i class="slow"></i>Slow</span>
+      <span><i class="heavy"></i>Heavy</span>
+      <span><i class="closed"></i>Closed</span>
+    </div>
 
     <label>
-      <input type="checkbox" disabled>
+      <input
+        type="checkbox"
+        :checked="showIncidents"
+        @change="$emit('toggle-incidents', $event.target.checked)"
+      >
       Incidents
     </label>
 
     <label>
-      <input type="checkbox" disabled>
+      <input
+        type="checkbox"
+        :checked="showRoadworks"
+        @change="$emit('toggle-roadworks', $event.target.checked)"
+      >
       Roadworks
     </label>
 
-    <label>
-      <input type="checkbox" disabled>
-      Traffic lights
-    </label>
-
-    <label>
-      <input type="checkbox" disabled>
-      Problem intersections
-    </label>
+    <div class="event-legend" aria-label="Event markers">
+      <span><i class="incident">!</i>Incident</span>
+      <span><i class="roadwork">R</i>Roadwork</span>
+    </div>
   </aside>
 </template>
 
@@ -138,6 +177,7 @@ function formatTrafficDelay(delayInSeconds) {
 
   position: relative;
   z-index: 20;
+  overflow-y: auto;
 }
 
 .title {
@@ -210,6 +250,11 @@ function formatTrafficDelay(delayInSeconds) {
   line-height: 1.35;
 }
 
+.traffic-explanation {
+  padding-left: 9px;
+  border-left: 3px solid #2563eb;
+}
+
 .waypoint-actions {
   display: flex;
   flex-wrap: wrap;
@@ -268,8 +313,6 @@ label {
   align-items: center;
 
   padding: 16px 0;
-  border-bottom: 1px solid #f3f4f6;
-
   font-size: 15px;
   color: #374151;
 }
@@ -278,5 +321,53 @@ input[type="checkbox"] {
   width: 18px;
   height: 18px;
 }
+
+.traffic-legend {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px 12px;
+  padding: 12px 0 4px;
+  color: #6b7280;
+  font-size: 12px;
+}
+
+.traffic-legend span {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+
+.traffic-legend i {
+  width: 18px;
+  height: 4px;
+  border-radius: 2px;
+  background: #f1bf40;
+}
+
+.traffic-legend .heavy { background: #e70704; }
+.traffic-legend .closed { background: #777777; }
+
+.event-legend {
+  display: flex;
+  gap: 16px;
+  padding-top: 12px;
+  color: #6b7280;
+  font-size: 12px;
+}
+
+.event-legend span { display: flex; align-items: center; gap: 6px; }
+.event-legend i {
+  width: 17px;
+  height: 17px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: #7c3aed;
+  color: #ffffff;
+  font-size: 10px;
+  font-style: normal;
+  font-weight: 700;
+}
+.event-legend .roadwork { background: #f59e0b; color: #111827; }
 
 </style>

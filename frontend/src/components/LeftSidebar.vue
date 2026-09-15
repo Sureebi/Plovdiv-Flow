@@ -15,10 +15,12 @@ defineProps({
   selectedTravelModeId: {
     type: String,
     required: true
-  }
+  },
+  savedLocations: { type: Array, required: true },
+  selectingLocation: { type: Boolean, default: false }
 })
 
-const emit = defineEmits(['quick-travel', 'travel-mode-change'])
+const emit = defineEmits(['quick-travel', 'travel-mode-change', 'add-location', 'edit-location', 'remove-location', 'cancel-location'])
 
 function selectPlace(place) {
   emit('quick-travel', place)
@@ -77,9 +79,27 @@ function selectTravelMode(mode) {
     <div class="section">
       <span class="section-title">SAVED PLACES</span>
 
-      <button class="add-place">
-        + Add location
+      <div v-for="place in savedLocations" :key="place.id" class="saved-place-row">
+        <button
+          class="saved-place"
+          :class="{ active: place.id === selectedDestinationId }"
+          @click="selectPlace(place)"
+        >
+          <span>{{ place.icon }}</span>
+          <span>{{ place.name }}</span>
+        </button>
+        <button class="icon-button" :title="`Move ${place.name}`" :aria-label="`Move ${place.name}`" @click="$emit('edit-location', place)">⌖</button>
+        <button class="icon-button remove" :title="`Remove ${place.name}`" :aria-label="`Remove ${place.name}`" @click="$emit('remove-location', place)">×</button>
+      </div>
+
+      <button v-if="selectingLocation" class="add-place selecting" @click="$emit('cancel-location')">
+        Cancel selection
       </button>
+      <button v-else-if="savedLocations.length < 2" class="add-place" @click="$emit('add-location')">
+        + Add location {{ savedLocations.length + 1 }}
+      </button>
+      <p v-if="selectingLocation" class="selection-hint">Choose the location on the map.</p>
+      <p v-else-if="savedLocations.length === 2" class="selection-hint">Two saved locations added.</p>
     </div>
   </aside>
 </template>
@@ -97,6 +117,7 @@ function selectTravelMode(mode) {
 
   position: relative;
   z-index: 20;
+  overflow-y: auto;
 }
 
 .brand {
@@ -209,6 +230,52 @@ p {
 .quick-place:hover {
   background: #f9fafb;
   border-radius: 10px;
+}
+
+.saved-place-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 36px 36px;
+  align-items: center;
+  border-bottom: 1px solid #f3f4f6;
+}
+
+.saved-place {
+  min-width: 0;
+  padding: 13px 6px;
+  border: 0;
+  background: transparent;
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  font-size: 14px;
+  cursor: pointer;
+}
+
+.saved-place.active {
+  color: #1d4ed8;
+  font-weight: 600;
+}
+
+.icon-button {
+  width: 32px;
+  height: 32px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: #6b7280;
+  font-size: 18px;
+  cursor: pointer;
+}
+
+.icon-button:hover { background: #f3f4f6; color: #111827; }
+.icon-button.remove:hover { background: #fef2f2; color: #dc2626; }
+.add-place.selecting { color: #dc2626; }
+
+.selection-hint {
+  margin: 4px 6px 0;
+  font-size: 12px;
+  line-height: 1.4;
+  color: #6b7280;
 }
 
 .quick-place.active {
