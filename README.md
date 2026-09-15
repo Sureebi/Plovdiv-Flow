@@ -2,7 +2,7 @@
 Real-time traffic monitoring and analytics platform for Plovdiv, Bulgaria
 
 
-![Plovdiv Flow preview](docs/preview.png)
+![Plovdiv Flow preview](frontend/docs/preview.png)
 
 
 ## Development
