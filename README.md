@@ -1,6 +1,10 @@
 # Plovdiv-Flow
 Real-time traffic monitoring and analytics platform for Plovdiv, Bulgaria
 
+
+![Plovdiv Flow preview](docs/preview.png)
+
+
 ## Development
 
 Run the backend API:
