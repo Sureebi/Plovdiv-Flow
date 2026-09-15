@@ -1,5 +1,7 @@
 import http from 'node:http'
 import { trafficRoute } from './traffic-routing.js'
+import { getTrafficTile } from './traffic-tiles.js'
+import { getTrafficIncidents } from './traffic-incidents.js'
 
 const port = Number(process.env.PORT ?? 8787)
 const osrmBaseUrl =
@@ -32,6 +34,50 @@ function sendJson(response, statusCode, payload) {
     'Access-Control-Allow-Headers': 'Content-Type'
   })
   response.end(JSON.stringify(payload))
+}
+
+async function handleTrafficTileRequest(request, response) {
+  const match = request.url.match(/^\/api\/traffic\/tiles\/(\d+)\/(\d+)\/(\d+)\.pbf(?:\?.*)?$/)
+  if (!match) return sendJson(response, 400, { error: 'Invalid traffic tile coordinates.' })
+
+  const [zoom, x, y] = match.slice(1).map(Number)
+  const tileCount = 2 ** zoom
+  if (zoom > 22 || x >= tileCount || y >= tileCount) {
+    return sendJson(response, 400, { error: 'Traffic tile is outside the valid range.' })
+  }
+
+  try {
+    const tile = await getTrafficTile({ zoom, x, y })
+    if (tile.status !== 200) return sendJson(response, tile.status, { error: tile.reason })
+    response.writeHead(200, {
+      'Content-Type': 'application/x-protobuf',
+      'Cache-Control': 'public, max-age=300',
+      'X-Tile-Cache': tile.cache
+    })
+    response.end(tile.body)
+  } catch {
+    sendJson(response, 502, { error: 'provider-unavailable' })
+  }
+}
+
+async function handleTrafficIncidentRequest(request, response) {
+  const url = new URL(request.url, `http://${request.headers.host}`)
+  const bbox = (url.searchParams.get('bbox') ?? '').split(',').map(Number)
+  if (bbox.length !== 4 || bbox.some((value) => !Number.isFinite(value))) {
+    return sendJson(response, 400, { error: 'Invalid bounding box.' })
+  }
+  const [west, south, east, north] = bbox
+  if (west >= east || south >= north || east - west > 2 || north - south > 2) {
+    return sendJson(response, 400, { error: 'Bounding box is outside the valid range.' })
+  }
+
+  try {
+    const incidents = await getTrafficIncidents(bbox)
+    if (incidents.status !== 200) return sendJson(response, incidents.status, { error: incidents.reason })
+    sendJson(response, 200, incidents.data)
+  } catch {
+    sendJson(response, 502, { error: 'provider-unavailable' })
+  }
 }
 
 function getDistanceInMeters(origin, destination) {
@@ -289,6 +335,18 @@ const server = http.createServer((request, response) => {
 
   if (request.method === 'GET' && request.url.startsWith('/api/routes')) {
     handleRouteRequest(request, response)
+    return
+  }
+
+
+  if (request.method === 'GET' && request.url.startsWith('/api/traffic/tiles/')) {
+    handleTrafficTileRequest(request, response)
+    return
+  }
+
+
+  if (request.method === 'GET' && request.url.startsWith('/api/traffic/incidents')) {
+    handleTrafficIncidentRequest(request, response)
     return
   }
 

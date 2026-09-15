@@ -32,7 +32,15 @@ export async function trafficRoute({ origin, destination, waypoint }) {
     if (!reserveRequest()) return { reason: 'daily-limit' }
     const locations = [origin, waypoint, destination].filter(Boolean)
       .map(([lng, lat]) => `${lat},${lng}`).join(':')
-    const params = new URLSearchParams({ key, traffic: 'true', departAt: 'now', routeType: 'fastest', travelMode: 'car', maxAlternatives: '2' })
+    const params = new URLSearchParams({
+      key,
+      traffic: 'true',
+      departAt: 'now',
+      routeType: 'fastest',
+      travelMode: 'car',
+      maxAlternatives: '2',
+      computeTravelTimeFor: 'all'
+    })
     const response = await fetch(`https://api.tomtom.com/routing/1/calculateRoute/${locations}/json?${params}`, { signal: AbortSignal.timeout(10000) })
     if (!response.ok) throw new Error('Traffic provider unavailable')
     const data = await response.json()
@@ -41,11 +49,23 @@ export async function trafficRoute({ origin, destination, waypoint }) {
     const routes = data.routes.map((route) => {
       const coordinates = route.legs.flatMap((leg) => leg.points.map((point) => [point.longitude, point.latitude]))
       if (coordinates.length < 2 || !Number.isFinite(route.summary.travelTimeInSeconds)) throw new Error('Invalid route')
+      const noTrafficTime = route.summary.noTrafficTravelTimeInSeconds
+      const totalTrafficDelay = Number.isFinite(noTrafficTime)
+        ? Math.max(0, route.summary.travelTimeInSeconds - noTrafficTime)
+        : route.summary.trafficDelayInSeconds ?? null
       return {
         distanceInMeters: route.summary.lengthInMeters,
         durationInMinutes: Math.max(1, Math.round(route.summary.travelTimeInSeconds / 60)),
-        trafficDelayInSeconds: route.summary.trafficDelayInSeconds ?? null,
-        traffic: { status: 'live', updatedAt },
+        trafficDelayInSeconds: totalTrafficDelay,
+        traffic: {
+          status: 'live',
+          updatedAt,
+          noTrafficTravelTimeInSeconds: route.summary.noTrafficTravelTimeInSeconds ?? null,
+          historicTrafficTravelTimeInSeconds: route.summary.historicTrafficTravelTimeInSeconds ?? null,
+          liveTrafficTravelTimeInSeconds: route.summary.liveTrafficIncidentsTravelTimeInSeconds ?? null,
+          trafficLengthInMeters: route.summary.trafficLengthInMeters ?? null,
+          incidentDelayInSeconds: route.summary.trafficDelayInSeconds ?? null
+        },
         source: 'tomtom',
         geometry: { type: 'Feature', properties: { travelModeId: 'car', hasWaypoint: Boolean(waypoint), source: 'tomtom' }, geometry: { type: 'LineString', coordinates } }
       }
