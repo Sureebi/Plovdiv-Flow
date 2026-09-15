@@ -1,14 +1,31 @@
 <script setup>
-const quickPlaces = [
-  { name: 'Home', icon: '🏠' },
-  { name: 'Work', icon: '💼' },
-  { name: 'Center', icon: '⭐' }
-]
+defineProps({
+  destinations: {
+    type: Array,
+    required: true
+  },
+  travelModes: {
+    type: Array,
+    required: true
+  },
+  selectedDestinationId: {
+    type: String,
+    default: null
+  },
+  selectedTravelModeId: {
+    type: String,
+    required: true
+  }
+})
 
-const emit = defineEmits(['quick-travel'])
+const emit = defineEmits(['quick-travel', 'travel-mode-change'])
 
 function selectPlace(place) {
   emit('quick-travel', place)
+}
+
+function selectTravelMode(mode) {
+  emit('travel-mode-change', mode)
 }
 </script>
 
@@ -31,10 +48,24 @@ function selectPlace(place) {
         </div>
       </div>
 
+      <div class="mode-selector">
+        <button
+          v-for="mode in travelModes"
+          :key="mode.id"
+          class="mode-button"
+          :class="{ active: mode.id === selectedTravelModeId }"
+          @click="selectTravelMode(mode)"
+        >
+          <span>{{ mode.icon }}</span>
+          <small>{{ mode.label }}</small>
+        </button>
+      </div>
+
       <button
-        v-for="place in quickPlaces"
-        :key="place.name"
+        v-for="place in destinations"
+        :key="place.id"
         class="quick-place"
+        :class="{ active: place.id === selectedDestinationId }"
         @click="selectPlace(place)"
       >
         <span>{{ place.icon }}</span>
@@ -126,6 +157,39 @@ p {
   color: #111827;
 }
 
+.mode-selector {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  margin-bottom: 14px;
+}
+
+.mode-button {
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+  background: #ffffff;
+  padding: 10px 6px;
+  display: grid;
+  gap: 4px;
+  place-items: center;
+  cursor: pointer;
+}
+
+.mode-button small {
+  font-size: 11px;
+  color: #6b7280;
+}
+
+.mode-button.active {
+  border-color: #2563eb;
+  background: #eff6ff;
+}
+
+.mode-button.active small {
+  color: #1d4ed8;
+  font-weight: 700;
+}
+
 .quick-place,
 .add-place {
   width: 100%;
@@ -145,6 +209,13 @@ p {
 .quick-place:hover {
   background: #f9fafb;
   border-radius: 10px;
+}
+
+.quick-place.active {
+  background: #eff6ff;
+  border-radius: 10px;
+  color: #1d4ed8;
+  font-weight: 600;
 }
 
 .arrow {
