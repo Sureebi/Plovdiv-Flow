@@ -5,6 +5,7 @@ defineProps({
   showTraffic: { type: Boolean, default: true },
   showIncidents: { type: Boolean, default: true },
   showRoadworks: { type: Boolean, default: true },
+  routeReversed: { type: Boolean, default: false },
   selectedDestination: {
     type: Object,
     default: null
@@ -23,7 +24,7 @@ defineProps({
   }
 })
 
-defineEmits(['toggle-waypoint', 'clear-waypoint', 'toggle-traffic', 'toggle-incidents', 'toggle-roadworks'])
+defineEmits(['toggle-waypoint', 'clear-waypoint', 'reverse-route', 'toggle-traffic', 'toggle-incidents', 'toggle-roadworks'])
 
 function formatDistance(distanceInMeters) {
   if (!distanceInMeters) return 'Pending'
@@ -81,8 +82,14 @@ function formatEstimatedTime(route, travelMode) {
     <div v-if="selectedDestination" class="route-card">
       <div class="title">ACTIVE ROUTE</div>
       <strong>{{ selectedDestination.icon }} {{ selectedDestination.name }}</strong>
-      <span>From current location by {{ travelMode.icon }} {{ travelMode.label }}</span>
+      <span>
+        {{ routeReversed ? `From ${selectedDestination.name} to current location` : `From current location to ${selectedDestination.name}` }}
+        by {{ travelMode.icon }} {{ travelMode.label }}
+      </span>
       <div class="waypoint-actions">
+        <button type="button" class="reverse-route" title="Reverse route" @click="$emit('reverse-route')">
+          <span aria-hidden="true">⇄</span> Reverse
+        </button>
         <button type="button" :aria-pressed="selectingWaypoint" @click="$emit('toggle-waypoint')">
           {{ selectingWaypoint ? 'Cancel selection' : hasWaypoint ? 'Change stop' : 'Add stop' }}
         </button>
@@ -280,6 +287,16 @@ function formatEstimatedTime(route, travelMode) {
 .waypoint-actions button:focus-visible {
   outline: 2px solid #2563eb;
   outline-offset: 2px;
+}
+
+.waypoint-actions .reverse-route {
+  color: #1d4ed8;
+  border-color: #93c5fd;
+}
+
+.waypoint-actions .reverse-route span {
+  color: inherit;
+  font-size: 16px;
 }
 
 .route-meta {

@@ -23,6 +23,7 @@ const props = defineProps({
   showRoadworks: { type: Boolean, default: true },
   selectingLocation: { type: Boolean, default: false },
   savedLocations: { type: Array, required: true },
+  routeReversed: { type: Boolean, default: false },
   destination: {
     type: Object,
     default: null
@@ -346,9 +347,18 @@ async function drawRouteToDestination(destination, travelMode) {
 
   ensureRouteLayer()
 
+  const currentLocation = {
+    id: 'current-location',
+    name: 'Current location',
+    icon: '📍',
+    coordinates: currentPosition
+  }
+  const routeOrigin = props.routeReversed ? destination.coordinates : currentPosition
+  const routeDestination = props.routeReversed ? currentLocation : destination
+
   const route = await calculateRoute(
-    currentPosition,
-    destination,
+    routeOrigin,
+    routeDestination,
     travelMode,
     props.waypoint
   )
@@ -483,6 +493,11 @@ watch(
     syncSavedLocationMarkers()
     drawRouteToDestination(destination, props.travelMode)
   }
+)
+
+watch(
+  () => props.routeReversed,
+  () => drawRouteToDestination(props.destination, props.travelMode)
 )
 
 watch(

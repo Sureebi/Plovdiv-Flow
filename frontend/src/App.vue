@@ -9,6 +9,7 @@ import { defaultTravelMode, travelModes } from './data/travelModes'
 const selectedDestination = ref(null)
 const selectedTravelMode = ref(defaultTravelMode)
 const activeRoute = ref(null)
+const routeReversed = ref(false)
 const waypoint = ref(null)
 const selectingWaypoint = ref(false)
 const showTraffic = ref(true)
@@ -25,7 +26,13 @@ function handleQuickTravel(place) {
   waypoint.value = null
   selectingWaypoint.value = false
   editingLocationId.value = null
+  routeReversed.value = false
   selectedDestination.value = place
+}
+
+function reverseRoute() {
+  routeReversed.value = !routeReversed.value
+  activeRoute.value = null
 }
 
 function loadCustomLocations() {
@@ -124,6 +131,7 @@ function handleLocationStatusChange(status) {
     <main class="map-area">
       <MapView
         :destination="selectedDestination"
+        :route-reversed="routeReversed"
         :travel-mode="selectedTravelMode"
         :waypoint="waypoint"
         :selecting-waypoint="selectingWaypoint"
@@ -146,6 +154,7 @@ function handleLocationStatusChange(status) {
       :selected-destination="selectedDestination"
       :travel-mode="selectedTravelMode"
       :active-route="activeRoute"
+      :route-reversed="routeReversed"
       :location-status="locationStatus"
       :has-waypoint="!!waypoint"
       :selecting-waypoint="selectingWaypoint"
@@ -154,6 +163,7 @@ function handleLocationStatusChange(status) {
       :show-roadworks="showRoadworks"
       @toggle-waypoint="toggleWaypointSelection"
       @clear-waypoint="clearWaypoint"
+      @reverse-route="reverseRoute"
       @toggle-traffic="showTraffic = $event"
       @toggle-incidents="showIncidents = $event"
       @toggle-roadworks="showRoadworks = $event"
