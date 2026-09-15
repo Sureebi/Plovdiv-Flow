@@ -1,7 +1,6 @@
 # Plovdiv-Flow
 Real-time traffic monitoring and analytics platform for Plovdiv, Bulgaria
 
-
 ![Plovdiv Flow preview](frontend/docs/preview.png)
 
 
@@ -57,5 +56,7 @@ overage. Do not delete the counter to reset usage.
 Missing credentials, exhausted budget, or provider errors fall back to
 OSRM without live traffic. The sidebar identifies missing traffic data.
 Traffic is fetched when calculating a car route, not continuously refreshed.
-Bike and walking routes still use Valhalla. Traffic map overlays are not
-connected. Route traffic and a colored traffic map are separate features.
+Bike and walking routes still use Valhalla. The optional traffic overlay is
+proxied through the backend, cached for five minutes, and capped by
+`TOMTOM_TILE_MONTHLY_LIMIT` (maximum 5000). Route traffic and colored traffic
+tiles use separate counters.
