@@ -1,34 +1,23 @@
 <script setup>
-import { onMounted, onBeforeUnmount } from 'vue'
-import { Map, NavigationControl, setWorkerUrl } from 'maplibre-gl'
-import 'maplibre-gl/dist/maplibre-gl.css'
+import LeftSidebar from './components/LeftSidebar.vue'
+import RightSidebar from './components/RightSidebar.vue'
+import MapView from './components/MapView.vue'
 
-import workerUrl from 'maplibre-gl/dist/maplibre-gl-worker.mjs?worker&url'
-
-setWorkerUrl(workerUrl)
-
-let map
-
-onMounted(() => {
-  map = new Map({
-    container: 'map',
-    style: 'https://tiles.openfreemap.org/styles/liberty',
-    center: [24.7453, 42.1354],
-    zoom: 12
-  })
-
-  map.addControl(new NavigationControl(), 'top-right')
-})
-
-onBeforeUnmount(() => {
-  if (map) {
-    map.remove()
-  }
-})
+function handleQuickTravel(place) {
+  console.log('Travel from current location to:', place)
+}
 </script>
 
 <template>
-  <div id="map"></div>
+  <div class="app-shell">
+    <LeftSidebar @quick-travel="handleQuickTravel" />
+
+    <main class="map-area">
+      <MapView />
+    </main>
+
+    <RightSidebar />
+  </div>
 </template>
 
 <style>
