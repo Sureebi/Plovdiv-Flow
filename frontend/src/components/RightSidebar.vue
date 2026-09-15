@@ -53,17 +53,17 @@ function formatEstimatedTime(route, travelMode) {
     return `${route.durationInMinutes} min`
   }
 
-  const currentSeconds = route.durationInMinutes * 60
-  const times = [
-    route.traffic.noTrafficTravelTimeInSeconds,
-    route.traffic.historicTrafficTravelTimeInSeconds,
-    route.traffic.liveTrafficTravelTimeInSeconds,
-    currentSeconds
-  ].filter((value) => Number.isFinite(value))
+  const current = route.durationInMinutes
+  const clear = route.traffic.noTrafficTravelTimeInSeconds / 60
+  const usual = route.traffic.historicTrafficTravelTimeInSeconds / 60
+  const live = route.traffic.liveTrafficTravelTimeInSeconds / 60
+  const estimates = [current, usual, live].filter((value) => Number.isFinite(value))
 
-  if (!times.length) return `${route.durationInMinutes} min`
-  const minimum = Math.max(1, Math.floor(Math.min(...times) / 60))
-  const maximum = Math.max(minimum, Math.ceil(Math.max(...times) / 60))
+  if (!Number.isFinite(clear) || !estimates.length) return `${current} min`
+
+  const trafficDifference = Math.max(1, ...estimates.map((value) => value - clear))
+  const minimum = Math.max(1, Math.floor(Math.min(...estimates) - trafficDifference * (2 / 3)))
+  const maximum = Math.max(minimum, Math.ceil(Math.max(...estimates) + trafficDifference * 2))
   return minimum === maximum ? `${maximum} min` : `${minimum}–${maximum} min`
 }
 </script>
@@ -93,11 +93,11 @@ function formatEstimatedTime(route, travelMode) {
         {{ activeRoute.traffic?.status === 'live' ? 'Traffic included at ' + new Date(activeRoute.traffic.updatedAt).toLocaleTimeString() : activeRoute.traffic?.reason === 'daily-limit' ? 'Daily traffic limit reached. Time excludes live traffic.' : 'Time excludes live traffic.' }}
       </p>
       <p v-if="activeRoute?.traffic?.status === 'live'" class="route-hint traffic-explanation">
-        Current estimate: {{ activeRoute.durationInMinutes }} min. The range compares clear roads, usual traffic and live traffic.
+        Current estimate: {{ activeRoute.durationInMinutes }} min. The planning range adds a conservative traffic buffer.
       </p>
       <div v-if="activeRoute" class="route-meta">
         <div>
-          <small>{{ travelMode.id === 'car' ? 'ESTIMATED RANGE' : 'ESTIMATED TIME' }}</small>
+          <small>{{ travelMode.id === 'car' ? 'PLANNING RANGE' : 'ESTIMATED TIME' }}</small>
           <b>{{ formatEstimatedTime(activeRoute, travelMode) }}</b>
         </div>
         <div>
