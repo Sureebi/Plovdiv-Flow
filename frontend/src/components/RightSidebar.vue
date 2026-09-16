@@ -387,4 +387,44 @@ input[type="checkbox"] {
 }
 .event-legend .roadwork { background: #f59e0b; color: #111827; }
 
+@media (max-width: 800px) {
+  .right-sidebar {
+    position: fixed;
+    inset: auto 0 0 0;
+    z-index: 35;
+    width: 100%;
+    height: auto;
+    max-height: min(78dvh, 680px);
+    padding: 20px 20px calc(24px + env(safe-area-inset-bottom));
+    border-top: 1px solid #e5e7eb;
+    border-left: 0;
+    border-radius: 8px 8px 0 0;
+    box-shadow: 0 -12px 32px rgba(17, 24, 39, 0.18);
+    transform: translateY(105%);
+    transition: transform 180ms ease-out;
+  }
+
+  .right-sidebar.mobile-open {
+    transform: translateY(0);
+  }
+
+  .right-sidebar::before {
+    content: '';
+    display: block;
+    width: 40px;
+    height: 4px;
+    margin: -8px auto 14px;
+    border-radius: 2px;
+    background: #d1d5db;
+  }
+
+  .location-status { margin-bottom: 18px; }
+  .route-card { margin-bottom: 20px; padding-bottom: 18px; }
+  .route-card .title { margin-bottom: 14px; }
+  .route-meta { gap: 8px; }
+  .route-meta div { padding: 10px; }
+  .right-sidebar > .title { margin-bottom: 8px; }
+  label { padding: 12px 0; }
+}
+
 </style>

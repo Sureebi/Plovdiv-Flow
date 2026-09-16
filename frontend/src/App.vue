@@ -17,6 +17,7 @@ const showIncidents = ref(true)
 const showRoadworks = ref(true)
 const customLocations = ref(loadCustomLocations())
 const editingLocationId = ref(null)
+const mobilePanel = ref(null)
 const locationStatus = ref({
   status: 'pending',
   message: 'Finding current location...'
@@ -28,6 +29,7 @@ function handleQuickTravel(place) {
   editingLocationId.value = null
   routeReversed.value = false
   selectedDestination.value = place
+  mobilePanel.value = null
 }
 
 function reverseRoute() {
@@ -53,6 +55,7 @@ function startAddingLocation(location = null) {
   editingLocationId.value = location?.id ?? (
     customLocations.value.some((place) => place.id === 'custom-1') ? 'custom-2' : 'custom-1'
   )
+  mobilePanel.value = null
 }
 
 function handleLocationSelected(coordinates) {
@@ -96,6 +99,7 @@ function clearWaypoint() {
 function toggleWaypointSelection() {
   editingLocationId.value = null
   selectingWaypoint.value = !selectingWaypoint.value
+  if (selectingWaypoint.value) mobilePanel.value = null
 }
 
 function handleTravelModeChange(mode) {
@@ -106,6 +110,10 @@ function handleRouteCalculated(route) {
   activeRoute.value = route
 }
 
+function toggleMobilePanel(panel) {
+  mobilePanel.value = mobilePanel.value === panel ? null : panel
+}
+
 function handleLocationStatusChange(status) {
   locationStatus.value = status
 }
@@ -113,7 +121,31 @@ function handleLocationStatusChange(status) {
 
 <template>
   <div class="app-shell">
+    <header class="mobile-toolbar">
+      <button type="button" aria-label="Open places" :aria-expanded="mobilePanel === 'places'" @click="toggleMobilePanel('places')">
+        <span aria-hidden="true">☰</span>
+        <small>Places</small>
+      </button>
+      <div class="mobile-brand">
+        <img src="/favicon-32.png" alt="">
+        <strong>Plovdiv Flow</strong>
+      </div>
+      <button type="button" aria-label="Open route details" :aria-expanded="mobilePanel === 'route'" @click="toggleMobilePanel('route')">
+        <span aria-hidden="true">↗</span>
+        <small>Route</small>
+      </button>
+    </header>
+
+    <button
+      v-if="mobilePanel"
+      type="button"
+      class="mobile-backdrop"
+      aria-label="Close panel"
+      @click="mobilePanel = null"
+    ></button>
+
     <LeftSidebar
+      :class="{ 'mobile-open': mobilePanel === 'places' }"
       :destinations="savedDestinations"
       :travel-modes="travelModes"
       :selected-destination-id="selectedDestination?.id"
@@ -151,6 +183,7 @@ function handleLocationStatusChange(status) {
     </main>
 
     <RightSidebar
+      :class="{ 'mobile-open': mobilePanel === 'route' }"
       :selected-destination="selectedDestination"
       :travel-mode="selectedTravelMode"
       :active-route="activeRoute"
@@ -177,5 +210,72 @@ function handleLocationStatusChange(status) {
   inset: 0;
   width: 100vw;
   height: 100vh;
+}
+
+.mobile-toolbar,
+.mobile-backdrop {
+  display: none;
+}
+
+@media (max-width: 800px) {
+  .mobile-toolbar {
+    position: fixed;
+    inset: 0 0 auto 0;
+    z-index: 40;
+    display: grid;
+    grid-template-columns: 64px 1fr 64px;
+    align-items: center;
+    height: calc(58px + env(safe-area-inset-top));
+    padding: env(safe-area-inset-top) 8px 0;
+    background: rgba(255, 255, 255, 0.96);
+    border-bottom: 1px solid #e5e7eb;
+    backdrop-filter: blur(10px);
+  }
+
+  .mobile-toolbar button {
+    height: 50px;
+    padding: 4px;
+    border: 0;
+    background: transparent;
+    color: #374151;
+    cursor: pointer;
+  }
+
+  .mobile-toolbar button span,
+  .mobile-toolbar button small {
+    display: block;
+  }
+
+  .mobile-toolbar button span { font-size: 21px; line-height: 23px; }
+  .mobile-toolbar button small { font-size: 10px; }
+  .mobile-toolbar button[aria-expanded='true'] { color: #1d4ed8; }
+
+  .mobile-brand {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    min-width: 0;
+    color: #111827;
+  }
+
+  .mobile-brand img { width: 28px; height: 28px; border-radius: 7px; }
+  .mobile-brand strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 16px; }
+
+  .mobile-backdrop {
+    position: fixed;
+    inset: 0;
+    z-index: 29;
+    display: block;
+    width: 100%;
+    height: 100%;
+    padding: 0;
+    border: 0;
+    background: rgba(17, 24, 39, 0.32);
+  }
+
+  #map {
+    height: 100dvh;
+  }
 }
 </style>

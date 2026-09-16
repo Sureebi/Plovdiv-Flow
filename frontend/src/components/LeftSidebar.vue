@@ -296,4 +296,27 @@ p {
   font-weight: 500;
 }
 
+@media (max-width: 800px) {
+  .left-sidebar {
+    position: fixed;
+    inset: calc(58px + env(safe-area-inset-top)) auto 0 0;
+    z-index: 35;
+    width: min(88vw, 350px);
+    height: calc(100dvh - 58px - env(safe-area-inset-top));
+    padding: 22px 22px calc(24px + env(safe-area-inset-bottom));
+    box-shadow: 12px 0 32px rgba(17, 24, 39, 0.18);
+    transform: translateX(-105%);
+    transition: transform 180ms ease-out;
+  }
+
+  .left-sidebar.mobile-open {
+    transform: translateX(0);
+  }
+
+  .brand { margin-bottom: 24px; }
+  h1 { font-size: 30px; }
+  .section { margin-top: 22px; }
+  .quick-place { padding-block: 13px; }
+}
+
 </style>

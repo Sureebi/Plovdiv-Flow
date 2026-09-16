@@ -396,12 +396,9 @@ async function drawRouteToDestination(destination, travelMode) {
   )
 
   map.fitBounds(bounds, {
-    padding: {
-      top: 90,
-      bottom: 90,
-      left: 380,
-      right: 360
-    },
+    padding: window.innerWidth <= 800
+      ? { top: 90, bottom: 70, left: 35, right: 35 }
+      : { top: 90, bottom: 90, left: 380, right: 360 },
     maxZoom: 15
   })
 
@@ -623,5 +620,11 @@ onBeforeUnmount(() => {
   box-shadow: 0 6px 16px rgba(15, 23, 42, 0.25);
   font-size: 15px;
   cursor: pointer;
+}
+
+@media (max-width: 800px) {
+  :global(.maplibregl-ctrl-top-right) {
+    top: calc(66px + env(safe-area-inset-top));
+  }
 }
 </style>
